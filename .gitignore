@@ -1,0 +1,51 @@
+# Python and local environments
+.venv
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.token
+credentials*
+secrets/
+
+# Model weights, adapters, and caches
+models/
+checkpoints/
+outputs/
+adapters/
+hf-cache/
+wandb/
+runs/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.onnx
+
+# Datasets and generated ECGs
+data/raw/
+data/processed/
+data/manifests/*.jsonl
+data/predictions/
+*.hea
+*.dat
+*.mat
+
+# Notebook and editor state
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log

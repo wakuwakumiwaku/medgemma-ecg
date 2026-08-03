@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medgemma-ecg"
+version = "0.1.0"
+description = "Reproducible ECG image fine-tuning and evaluation for MedGemma 1.5"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "wakuwakumiwaku"}]
+dependencies = [
+  "numpy>=1.26",
+  "Pillow>=10.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+train = [
+  "torch>=2.7",
+  "transformers>=4.50.0",
+  "accelerate>=1.2",
+  "bitsandbytes>=0.45",
+  "peft>=0.14",
+  "huggingface-hub>=0.28",
+  "safetensors>=0.4",
+  "tensorboard>=2.18",
+]
+ecg = [
+  "wfdb>=4.2",
+  "pandas>=2.2",
+  "matplotlib>=3.9",
+  "scikit-learn>=1.5",
+]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.9",
+]
+
+[project.scripts]
+medgemma-ecg-download = "medgemma_ecg.download_model:main"
+medgemma-ecg-train = "medgemma_ecg.train:main"
+medgemma-ecg-infer = "medgemma_ecg.infer:main"
+medgemma-ecg-predict = "medgemma_ecg.predict:main"
+medgemma-ecg-validate = "medgemma_ecg.manifest:main"
+medgemma-ecg-evaluate = "medgemma_ecg.evaluate:main"
+medgemma-ecg-prepare-ptbxl = "medgemma_ecg.prepare_ptbxl:main"
+medgemma-ecg-smoke-data = "medgemma_ecg.smoke_data:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

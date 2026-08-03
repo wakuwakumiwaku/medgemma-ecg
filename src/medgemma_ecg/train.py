@@ -196,7 +196,7 @@ def main() -> None:
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
         optim="paged_adamw_8bit",
-        warmup_ratio=0.03,
+        warmup_steps=int(config.get("warmup_steps", 0)),
         lr_scheduler_type="cosine",
         max_grad_norm=0.3,
         remove_unused_columns=False,

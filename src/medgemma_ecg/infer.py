@@ -11,6 +11,8 @@ from medgemma_ecg.prompts import training_messages
 
 def extract_json(text: str) -> dict | None:
     text = text.strip()
+    if "<unused95>" in text:
+        text = text.rsplit("<unused95>", 1)[1].strip()
     if text.startswith("```"):
         lines = text.splitlines()
         if lines and lines[0].startswith("```"):
@@ -21,7 +23,18 @@ def extract_json(text: str) -> dict | None:
     try:
         value = json.loads(text)
     except json.JSONDecodeError:
-        return None
+        decoder = json.JSONDecoder()
+        candidates: list[tuple[int, dict]] = []
+        for index, character in enumerate(text):
+            if character != "{":
+                continue
+            try:
+                candidate, consumed = decoder.raw_decode(text[index:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, dict):
+                candidates.append((consumed, candidate))
+        return max(candidates, default=(0, None), key=lambda item: item[0])[1]
     return value if isinstance(value, dict) else None
 
 
@@ -30,7 +43,7 @@ def main() -> None:
     parser.add_argument("--model", default="models/medgemma-1.5-4b-it")
     parser.add_argument("--adapter", type=Path)
     parser.add_argument("--image", type=Path, required=True)
-    parser.add_argument("--max-new-tokens", type=int, default=512)
+    parser.add_argument("--max-new-tokens", type=int, default=2000)
     parser.add_argument("--no-quantization", action="store_true")
     args = parser.parse_args()
 

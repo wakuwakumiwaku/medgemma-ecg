@@ -18,7 +18,7 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--data-root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--max-new-tokens", type=int, default=512)
+    parser.add_argument("--max-new-tokens", type=int, default=2000)
     parser.add_argument("--limit", type=int)
     parser.add_argument("--no-quantization", action="store_true")
     args = parser.parse_args()

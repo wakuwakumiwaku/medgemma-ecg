@@ -18,7 +18,7 @@ The default configuration targets:
 - WSL2/Linux
 - Python 3.12
 - CUDA 12.8 PyTorch wheels
-- 4-bit NF4 QLoRA, batch size 1, gradient checkpointing
+- 4-bit NF4 QLoRA, batch size 1, LoRA rank 8, gradient checkpointing
 
 Google's reference vision fine-tuning notebook specifies a 40 GB GPU. The included 16 GB profile is deliberately conservative, but it still must be verified with a one-step training smoke test after gated model access is configured. If it runs out of memory, reduce `max_length`, keep batch size at 1, and use a smaller rendered image size only after measuring the effect on ECG readability.
 
@@ -30,7 +30,7 @@ source .venv/bin/activate
 python -m medgemma_ecg.doctor
 ```
 
-On WSL, the setup script keeps the virtual environment in Linux storage at `~/.venvs/medgemma-ecg` and creates a `.venv` symlink in the repository. This avoids very slow package installation on a Windows-mounted drive.
+On WSL, the setup script keeps the virtual environment in Linux storage at `~/.venvs/medgemma-ecg` and creates a `.venv` symlink in the repository. This avoids very slow package installation on a Windows-mounted drive. The versions verified on this hardware are pinned in `constraints-wsl-cu128.txt`.
 
 ## 2. Obtain MedGemma access
 
@@ -168,3 +168,5 @@ Useful sources:
 ## License
 
 Code in this repository is licensed under Apache-2.0. MedGemma weights are governed separately by Google's Health AI Developer Foundations terms. Every ECG dataset retains its own license and citation requirements.
+
+LoRA adapters and merged checkpoints may qualify as Model Derivatives under those terms. Before distributing either, review the current agreement at https://developers.google.com/health-ai-developer-foundations/terms and include all required use restrictions, modification notices, agreement copy, and prescribed notice text. This repository does not distribute a model derivative.

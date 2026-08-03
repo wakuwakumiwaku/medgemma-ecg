@@ -26,6 +26,15 @@ DISPLAY_ORDER = [
 ]
 
 
+def normalize_lead_name(name: str) -> str:
+    normalized = str(name).strip().upper()
+    return {
+        "AVR": "aVR",
+        "AVL": "aVL",
+        "AVF": "aVF",
+    }.get(normalized, normalized)
+
+
 def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Path) -> None:
     import matplotlib
 
@@ -34,7 +43,9 @@ def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Pat
 
     if signal.ndim != 2 or signal.shape[1] != len(lead_names):
         raise ValueError("signal shape and lead names do not match")
-    lead_index = {name: index for index, name in enumerate(lead_names)}
+    lead_index = {
+        normalize_lead_name(name): index for index, name in enumerate(lead_names)
+    }
     missing = set(CANONICAL_LEADS) - set(lead_index)
     if missing:
         raise ValueError(f"missing required leads: {sorted(missing)}")
@@ -92,9 +103,11 @@ def split_from_fold(fold: int) -> str:
 
 def statement_label_groups(scp_codes: dict, statements) -> dict[str, list[str]]:
     groups: dict[str, list[str]] = {"diagnostic": [], "rhythm": [], "form": []}
-    for code, likelihood in scp_codes.items():
-        if float(likelihood) <= 0 or code not in statements.index:
+    for code in scp_codes:
+        if code not in statements.index:
             continue
+        # A listed SCP code is an annotation even when its optional likelihood is 0.
+        # PTB-XL commonly encodes labels such as sinus rhythm as {"SR": 0.0}.
         row = statements.loc[code]
         for group in groups:
             try:

@@ -15,8 +15,8 @@ logging_steps: 5
 eval_steps: 50
 save_steps: 50
 max_length: 1024
-lora_r: 16
-lora_alpha: 32
+lora_r: 8
+lora_alpha: 16
 lora_dropout: 0.05
 target_modules: all-linear
 max_train_samples: null

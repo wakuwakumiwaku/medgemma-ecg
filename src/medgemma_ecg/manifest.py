@@ -8,6 +8,7 @@ from pathlib import Path
 
 ALLOWED_SPLITS = {"train", "validation", "test"}
 REQUIRED_FIELDS = {"id", "patient_id", "split", "image", "labels", "target", "source"}
+MISSING_IDENTIFIER_VALUES = {"", "nan", "none", "null"}
 
 
 class ManifestError(ValueError):
@@ -54,9 +55,15 @@ def validate_rows(
             errors.append(f"{location}: missing fields {sorted(missing)}")
             continue
 
-        sample_id = str(row["id"])
-        patient_id = str(row["patient_id"])
+        sample_id = "" if row["id"] is None else str(row["id"]).strip()
+        patient_id = (
+            "" if row["patient_id"] is None else str(row["patient_id"]).strip()
+        )
         split = str(row["split"])
+        if sample_id.lower() in MISSING_IDENTIFIER_VALUES:
+            errors.append(f"{location}: id must be non-empty")
+        if patient_id.lower() in MISSING_IDENTIFIER_VALUES:
+            errors.append(f"{location}: patient_id must be non-empty")
         if sample_id in seen_ids:
             errors.append(f"{location}: duplicate id {sample_id!r}")
         seen_ids.add(sample_id)

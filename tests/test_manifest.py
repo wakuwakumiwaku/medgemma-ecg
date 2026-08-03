@@ -40,6 +40,15 @@ def test_manifest_rejects_patient_leakage(tmp_path: Path) -> None:
         validate_rows(rows)
 
 
+def test_missing_patient_identifier_is_rejected(tmp_path: Path) -> None:
+    image = tmp_path / "ecg.png"
+    image.write_bytes(b"x")
+    row = sample("a", "patient-1", "train", image)
+    row["patient_id"] = None
+    with pytest.raises(ManifestError, match="patient_id must be non-empty"):
+        validate_rows([row])
+
+
 def test_manifest_rejects_label_mismatch(tmp_path: Path) -> None:
     image = tmp_path / "a.png"
     image.write_bytes(b"image")

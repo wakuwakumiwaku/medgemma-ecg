@@ -9,9 +9,11 @@ if [ -e .venv ] && [ ! -L .venv ]; then
 fi
 python3 -m venv "$venv_dir"
 ln -sfn "$venv_dir" .venv
-.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install --upgrade pip wheel "setuptools<82"
 .venv/bin/python -m pip install \
-  torch torchvision \
+  torch==2.11.0+cu128 torchvision==0.26.0+cu128 \
   --index-url https://download.pytorch.org/whl/cu128
-.venv/bin/python -m pip install -e ".[train,ecg,dev]"
+.venv/bin/python -m pip install \
+  -c constraints-wsl-cu128.txt \
+  -e ".[train,ecg,dev]"
 .venv/bin/python -m medgemma_ecg.doctor

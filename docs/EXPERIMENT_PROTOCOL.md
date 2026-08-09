@@ -47,7 +47,7 @@ For multilabel generation:
 - exact label-set accuracy
 - micro, macro, and weighted precision, recall, and F1
 - per-label sensitivity, specificity, positive predictive value, and negative predictive value
-- bootstrap confidence intervals grouped by patient
+- deterministic percentile-bootstrap confidence intervals grouped by patient, with the resample count, confidence level, and random seed recorded
 - invalid-JSON rate and missing-field rate
 
 If calibrated label probabilities are added later:

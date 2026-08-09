@@ -119,10 +119,23 @@ python -m medgemma_ecg.predict \
 python -m medgemma_ecg.evaluate \
   --references data/processed/ptbxl/test.jsonl \
   --predictions data/predictions/test.jsonl \
-  --output outputs/test_metrics.json
+  --output outputs/test_metrics.json \
+  --bootstrap-samples 1000 \
+  --seed 42
 ```
 
-Reported generation metrics include exact set accuracy and micro/macro precision, recall, and F1. Do not tune on the test set. For a credible study, also report confidence intervals, per-label sensitivity/specificity, external-dataset performance, subgroup performance, and reader comparison.
+The evaluator reports exact set accuracy, micro/macro/weighted precision, recall and
+F1, plus per-label scores. Confidence intervals use a deterministic percentile
+bootstrap that resamples patients rather than individual ECGs, preserving correlation
+between records from the same patient. The default is 1,000 resamples at 95%
+confidence. Intervals record how many resamples had a defined metric, so rare-label
+results do not silently turn undefined sensitivity or precision into zero. Use
+`--bootstrap-samples 0` only when a quick point-estimate check is needed. Duplicate or
+mismatched sample IDs are rejected instead of being silently overwritten.
+
+Do not tune on the test set. For a credible study, also report per-label
+sensitivity/specificity, external-dataset performance, subgroup performance, and reader
+comparison.
 
 ## Manifest schema
 

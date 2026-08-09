@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from medgemma_ecg.prepare_ptbxl import (
     normalize_lead_name,
@@ -13,6 +14,12 @@ def test_recommended_ptbxl_folds() -> None:
     assert all(split_from_fold(fold) == "train" for fold in range(1, 9))
     assert split_from_fold(9) == "validation"
     assert split_from_fold(10) == "test"
+
+
+@pytest.mark.parametrize("fold", [-1, 0, 11])
+def test_invalid_ptbxl_folds_are_rejected(fold: int) -> None:
+    with pytest.raises(ValueError, match="unexpected PTB-XL strat_fold"):
+        split_from_fold(fold)
 
 
 def test_wfdb_augmented_lead_names_are_normalized() -> None:

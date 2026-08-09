@@ -92,7 +92,7 @@ def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Pat
 
 
 def split_from_fold(fold: int) -> str:
-    if fold <= 8:
+    if 1 <= fold <= 8:
         return "train"
     if fold == 9:
         return "validation"

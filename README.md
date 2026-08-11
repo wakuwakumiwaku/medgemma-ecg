@@ -125,7 +125,9 @@ python -m medgemma_ecg.evaluate \
 ```
 
 The evaluator reports exact set accuracy, micro/macro/weighted precision, recall and
-F1, plus per-label scores. Confidence intervals use a deterministic percentile
+F1, plus per-label specificity and negative predictive value. Per-label precision is
+the positive predictive value, and recall is sensitivity. Confidence intervals use a
+deterministic percentile
 bootstrap that resamples patients rather than individual ECGs, preserving correlation
 between records from the same patient. The default is 1,000 resamples at 95%
 confidence. Intervals record how many resamples had a defined metric, so rare-label
@@ -133,9 +135,8 @@ results do not silently turn undefined sensitivity or precision into zero. Use
 `--bootstrap-samples 0` only when a quick point-estimate check is needed. Duplicate or
 mismatched sample IDs are rejected instead of being silently overwritten.
 
-Do not tune on the test set. For a credible study, also report per-label
-sensitivity/specificity, external-dataset performance, subgroup performance, and reader
-comparison.
+Do not tune on the test set. For a credible study, also report external-dataset
+performance, subgroup performance, and reader comparison.
 
 ## Manifest schema
 

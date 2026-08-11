@@ -42,6 +42,8 @@ def test_evaluate_rows_reports_multilabel_metrics() -> None:
         "f1": pytest.approx(0.75),
     }
     assert report["per_label"]["A"]["support"] == 2
+    assert report["per_label"]["A"]["specificity"] == pytest.approx(0.5)
+    assert report["per_label"]["A"]["npv"] == pytest.approx(0.5)
     assert "confidence_intervals" not in report
 
 
@@ -87,6 +89,10 @@ def test_perfect_predictions_keep_perfect_bootstrap_intervals() -> None:
     for average in ("micro", "macro", "weighted"):
         assert intervals[average]["f1"]["lower"] == pytest.approx(1.0)
         assert intervals[average]["f1"]["upper"] == pytest.approx(1.0)
+    for label in ("A", "B"):
+        for metric in ("specificity", "npv"):
+            assert intervals["per_label"][label][metric]["lower"] == pytest.approx(1.0)
+            assert intervals["per_label"][label][metric]["upper"] == pytest.approx(1.0)
 
 
 def test_evaluate_rows_rejects_duplicate_ids() -> None:

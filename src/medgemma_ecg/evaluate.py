@@ -42,7 +42,11 @@ def _score_arrays(
     *,
     zero_division: Any = 0,
 ) -> dict:
-    from sklearn.metrics import accuracy_score, precision_recall_fscore_support
+    from sklearn.metrics import (
+        accuracy_score,
+        multilabel_confusion_matrix,
+        precision_recall_fscore_support,
+    )
 
     report: dict[str, Any] = {
         "exact_set_accuracy": float(accuracy_score(y_true, y_pred)),
@@ -60,15 +64,23 @@ def _score_arrays(
     precision, recall, f1, support = precision_recall_fscore_support(
         y_true, y_pred, average=None, zero_division=zero_division
     )
-    report["per_label"] = {
-        label: {
+    confusion = multilabel_confusion_matrix(y_true, y_pred)
+    per_label = {}
+
+    def ratio(numerator: int, denominator: int) -> float:
+        return float(numerator / denominator) if denominator else float(zero_division)
+
+    for index, label in enumerate(labels):
+        true_negative, false_positive, false_negative, _ = confusion[index].ravel()
+        per_label[label] = {
             "precision": float(precision[index]),
             "recall": float(recall[index]),
             "f1": float(f1[index]),
             "support": int(support[index]),
+            "specificity": ratio(true_negative, true_negative + false_positive),
+            "npv": ratio(true_negative, true_negative + false_negative),
         }
-        for index, label in enumerate(labels)
-    }
+    report["per_label"] = per_label
     return report
 
 
@@ -96,7 +108,7 @@ def _metric_paths(labels: Sequence[str]) -> list[tuple[str, ...]]:
     paths.extend(
         ("per_label", label, metric)
         for label in labels
-        for metric in ("precision", "recall", "f1")
+        for metric in ("precision", "recall", "f1", "specificity", "npv")
     )
     return paths
 

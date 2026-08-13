@@ -44,12 +44,14 @@ def _score_arrays(
 ) -> dict:
     from sklearn.metrics import (
         accuracy_score,
+        hamming_loss,
         multilabel_confusion_matrix,
         precision_recall_fscore_support,
     )
 
     report: dict[str, Any] = {
         "exact_set_accuracy": float(accuracy_score(y_true, y_pred)),
+        "hamming_loss": float(hamming_loss(y_true, y_pred)),
     }
     for average in AVERAGES:
         precision, recall, f1, _ = precision_recall_fscore_support(
@@ -99,7 +101,7 @@ def _patient_bootstrap_indices(
 
 
 def _metric_paths(labels: Sequence[str]) -> list[tuple[str, ...]]:
-    paths: list[tuple[str, ...]] = [("exact_set_accuracy",)]
+    paths: list[tuple[str, ...]] = [("exact_set_accuracy",), ("hamming_loss",)]
     paths.extend(
         (average, metric)
         for average in AVERAGES

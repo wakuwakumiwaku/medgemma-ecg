@@ -36,6 +36,7 @@ def test_evaluate_rows_reports_multilabel_metrics() -> None:
     assert report["patients"] == 3
     assert report["labels"] == ["A", "B"]
     assert report["exact_set_accuracy"] == pytest.approx(0.5)
+    assert report["hamming_loss"] == pytest.approx(0.25)
     assert report["micro"] == {
         "precision": pytest.approx(0.75),
         "recall": pytest.approx(0.75),
@@ -64,6 +65,9 @@ def test_patient_bootstrap_is_reproducible() -> None:
     exact = intervals["exact_set_accuracy"]
     assert 0 <= exact["lower"] <= exact["upper"] <= 1
     assert exact["valid_resamples"] == 200
+    hamming = intervals["hamming_loss"]
+    assert 0 <= hamming["lower"] <= hamming["upper"] <= 1
+    assert hamming["valid_resamples"] == 200
     assert set(intervals["per_label"]) == {"A", "B"}
     assert intervals["per_label"]["A"]["recall"]["valid_resamples"] < 200
 

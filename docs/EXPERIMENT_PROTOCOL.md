@@ -45,6 +45,7 @@ The waveform baseline is important because a general-purpose image-language mode
 For multilabel generation:
 
 - exact label-set accuracy
+- Hamming loss
 - micro, macro, and weighted precision, recall, and F1
 - per-label sensitivity, specificity, positive predictive value, and negative predictive value
 - deterministic percentile-bootstrap confidence intervals grouped by patient, with the resample count, confidence level, and random seed recorded

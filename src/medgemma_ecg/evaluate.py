@@ -15,7 +15,9 @@ AVERAGES = ("micro", "macro", "weighted")
 
 
 def _labels(row: dict, source: str, sample_id: str) -> list[str]:
-    values = row.get("labels", [])
+    if "labels" not in row:
+        raise ValueError(f"{source} id {sample_id!r} is missing labels")
+    values = row["labels"]
     if not isinstance(values, list) or not all(
         isinstance(label, str) and label.strip() for label in values
     ):

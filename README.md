@@ -134,6 +134,7 @@ confidence. Intervals record how many resamples had a defined metric, so rare-la
 results do not silently turn undefined sensitivity or precision into zero. Use
 `--bootstrap-samples 0` only when a quick point-estimate check is needed. Duplicate or
 mismatched sample IDs are rejected instead of being silently overwritten.
+Every evaluation row must include a `labels` list; use `[]` to record no labels.
 
 Do not tune on the test set. For a credible study, also report external-dataset
 performance, subgroup performance, and reader comparison.

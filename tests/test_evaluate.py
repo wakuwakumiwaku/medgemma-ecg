@@ -106,6 +106,14 @@ def test_evaluate_rows_rejects_duplicate_ids() -> None:
         evaluate_rows(references, prediction_rows(), bootstrap_samples=0)
 
 
+def test_evaluate_rows_requires_explicit_prediction_labels() -> None:
+    predictions = prediction_rows()
+    predictions[0] = {"id": "a"}
+
+    with pytest.raises(ValueError, match="prediction id 'a' is missing labels"):
+        evaluate_rows(reference_rows(), predictions, bootstrap_samples=0)
+
+
 def test_evaluate_cli_writes_bootstrap_report(
     tmp_path: Path, capsys: pytest.CaptureFixture
 ) -> None:

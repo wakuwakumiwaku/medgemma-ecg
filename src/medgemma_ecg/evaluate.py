@@ -75,12 +75,16 @@ def _score_arrays(
         return float(numerator / denominator) if denominator else float(zero_division)
 
     for index, label in enumerate(labels):
-        true_negative, false_positive, false_negative, _ = confusion[index].ravel()
+        true_negative, false_positive, false_negative, true_positive = confusion[index].ravel()
         per_label[label] = {
             "precision": float(precision[index]),
             "recall": float(recall[index]),
             "f1": float(f1[index]),
             "support": int(support[index]),
+            "true_positive": int(true_positive),
+            "true_negative": int(true_negative),
+            "false_positive": int(false_positive),
+            "false_negative": int(false_negative),
             "specificity": ratio(true_negative, true_negative + false_positive),
             "npv": ratio(true_negative, true_negative + false_negative),
         }

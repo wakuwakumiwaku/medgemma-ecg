@@ -43,6 +43,10 @@ def test_evaluate_rows_reports_multilabel_metrics() -> None:
         "f1": pytest.approx(0.75),
     }
     assert report["per_label"]["A"]["support"] == 2
+    assert report["per_label"]["A"]["true_positive"] == 1
+    assert report["per_label"]["A"]["true_negative"] == 1
+    assert report["per_label"]["A"]["false_positive"] == 1
+    assert report["per_label"]["A"]["false_negative"] == 1
     assert report["per_label"]["A"]["specificity"] == pytest.approx(0.5)
     assert report["per_label"]["A"]["npv"] == pytest.approx(0.5)
     assert "confidence_intervals" not in report

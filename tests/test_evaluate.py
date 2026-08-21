@@ -52,6 +52,16 @@ def test_evaluate_rows_reports_multilabel_metrics() -> None:
     assert "confidence_intervals" not in report
 
 
+def test_evaluate_rows_normalizes_label_whitespace() -> None:
+    references = [{"id": "a", "patient_id": "p1", "labels": [" A "]}]
+    predictions = [{"id": "a", "labels": ["A"]}]
+
+    report = evaluate_rows(references, predictions, bootstrap_samples=0)
+
+    assert report["labels"] == ["A"]
+    assert report["exact_set_accuracy"] == pytest.approx(1.0)
+
+
 def test_patient_bootstrap_is_reproducible() -> None:
     first = evaluate_rows(
         reference_rows(), prediction_rows(), bootstrap_samples=200, confidence_level=90, seed=17

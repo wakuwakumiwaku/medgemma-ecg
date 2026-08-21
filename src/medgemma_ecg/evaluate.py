@@ -22,7 +22,7 @@ def _labels(row: dict, source: str, sample_id: str) -> list[str]:
         isinstance(label, str) and label.strip() for label in values
     ):
         raise ValueError(f"{source} id {sample_id!r} has invalid labels")
-    return sorted(set(values))
+    return sorted({label.strip() for label in values})
 
 
 def _index_rows(rows: Sequence[dict], source: str) -> dict[str, dict]:

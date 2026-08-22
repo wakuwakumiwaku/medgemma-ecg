@@ -26,11 +26,21 @@ TARGET_KEYS = (
 )
 
 
+def _as_list(value: object) -> list:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        return list(value)
+    return [value]
+
+
 def normalize_target(target: dict) -> dict:
     """Return a target with stable keys and JSON-compatible values."""
     normalized = {key: target.get(key) for key in TARGET_KEYS}
-    normalized["findings"] = list(normalized["findings"] or [])
-    normalized["labels"] = sorted(set(normalized["labels"] or []))
+    normalized["findings"] = _as_list(normalized["findings"])
+    normalized["labels"] = sorted(set(_as_list(normalized["labels"])))
     return normalized
 
 

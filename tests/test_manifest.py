@@ -58,6 +58,48 @@ def test_manifest_rejects_label_mismatch(tmp_path: Path) -> None:
         validate_rows([row])
 
 
+@pytest.mark.parametrize("field", ["labels", "target.labels"])
+@pytest.mark.parametrize("label", ["", " \t"])
+def test_manifest_rejects_empty_labels(tmp_path: Path, field: str, label: str) -> None:
+    image = tmp_path / "a.png"
+    image.write_bytes(b"image")
+    row = sample("a", "p1", "train", image)
+    destination = row if field == "labels" else row["target"]
+    destination["labels"] = [label]
+
+    with pytest.raises(
+        ManifestError, match=rf"{field} must be a list of non-empty strings"
+    ):
+        validate_rows([row])
+
+
+@pytest.mark.parametrize("field", ["labels", "target.labels"])
+def test_manifest_rejects_duplicate_normalized_labels(tmp_path: Path, field: str) -> None:
+    image = tmp_path / "a.png"
+    image.write_bytes(b"image")
+    row = sample("a", "p1", "train", image)
+    destination = row if field == "labels" else row["target"]
+    destination["labels"] = ["NORM", " NORM "]
+
+    with pytest.raises(
+        ManifestError, match=rf"{field} contains duplicates after trimming"
+    ):
+        validate_rows([row])
+
+
+@pytest.mark.parametrize("target_labels", [None, "MI", [1]])
+def test_manifest_rejects_malformed_target_labels(
+    tmp_path: Path, target_labels: object
+) -> None:
+    image = tmp_path / "a.png"
+    image.write_bytes(b"image")
+    row = sample("a", "p1", "train", image)
+    row["target"]["labels"] = target_labels
+
+    with pytest.raises(ManifestError, match="target.labels must be a list of non-empty strings"):
+        validate_rows([row])
+
+
 def test_write_jsonl_removes_internal_metadata(tmp_path: Path) -> None:
     output = tmp_path / "manifest.jsonl"
     write_jsonl(output, [{"id": "a", "_line": 3}])

@@ -39,6 +39,21 @@ def resolve_image_path(row: dict, data_root: str | Path = ".") -> Path:
     return image if image.is_absolute() else Path(data_root) / image
 
 
+def _validate_label_list(
+    value: object, field: str, location: str, errors: list[str]
+) -> list[str] | None:
+    if not isinstance(value, list) or not all(
+        isinstance(label, str) and label.strip() for label in value
+    ):
+        errors.append(f"{location}: {field} must be a list of non-empty strings")
+        return None
+    normalized = [label.strip() for label in value]
+    if len(normalized) != len(set(normalized)):
+        errors.append(f"{location}: {field} contains duplicates after trimming")
+        return None
+    return normalized
+
+
 def validate_rows(
     rows: Iterable[dict], data_root: str | Path = ".", require_images: bool = True
 ) -> dict:
@@ -75,17 +90,24 @@ def validate_rows(
             patient_splits[patient_id].add(split)
 
         labels = row["labels"]
-        if not isinstance(labels, list) or not all(isinstance(x, str) for x in labels):
-            errors.append(f"{location}: labels must be a list of strings")
-        else:
-            for label in set(labels):
+        normalized_labels = _validate_label_list(labels, "labels", location, errors)
+        if normalized_labels is not None:
+            for label in normalized_labels:
                 label_counts[label] += 1
 
         target = row["target"]
         if not isinstance(target, dict):
             errors.append(f"{location}: target must be an object")
-        elif sorted(target.get("labels", [])) != sorted(labels):
-            errors.append(f"{location}: labels and target.labels differ")
+        else:
+            normalized_target_labels = _validate_label_list(
+                target.get("labels"), "target.labels", location, errors
+            )
+            if (
+                normalized_labels is not None
+                and normalized_target_labels is not None
+                and sorted(normalized_target_labels) != sorted(normalized_labels)
+            ):
+                errors.append(f"{location}: labels and target.labels differ")
 
         if require_images:
             image_path = resolve_image_path(row, data_root)

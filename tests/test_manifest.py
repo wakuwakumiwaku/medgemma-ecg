@@ -100,6 +100,30 @@ def test_manifest_rejects_malformed_target_labels(
         validate_rows([row])
 
 
+@pytest.mark.parametrize(
+    ("labels", "target_labels"),
+    [
+        ([" NORM "], ["NORM"]),
+        (["NORM"], [" NORM "]),
+        ([" NORM "], [" NORM "]),
+    ],
+)
+def test_manifest_normalizes_validated_labels(
+    tmp_path: Path, labels: list[str], target_labels: list[str]
+) -> None:
+    image = tmp_path / "a.png"
+    image.write_bytes(b"image")
+    row = sample("a", "p1", "train", image)
+    row["labels"] = labels
+    row["target"]["labels"] = target_labels
+
+    report = validate_rows([row])
+
+    assert row["labels"] == ["NORM"]
+    assert row["target"]["labels"] == ["NORM"]
+    assert report["labels"] == {"NORM": 1}
+
+
 def test_write_jsonl_removes_internal_metadata(tmp_path: Path) -> None:
     output = tmp_path / "manifest.jsonl"
     write_jsonl(output, [{"id": "a", "_line": 3}])

@@ -92,6 +92,7 @@ def validate_rows(
         labels = row["labels"]
         normalized_labels = _validate_label_list(labels, "labels", location, errors)
         if normalized_labels is not None:
+            row["labels"] = normalized_labels
             for label in normalized_labels:
                 label_counts[label] += 1
 
@@ -102,6 +103,8 @@ def validate_rows(
             normalized_target_labels = _validate_label_list(
                 target.get("labels"), "target.labels", location, errors
             )
+            if normalized_target_labels is not None:
+                target["labels"] = normalized_target_labels
             if (
                 normalized_labels is not None
                 and normalized_target_labels is not None

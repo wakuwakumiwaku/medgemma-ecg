@@ -52,6 +52,41 @@ def test_evaluate_rows_reports_multilabel_metrics() -> None:
     assert "confidence_intervals" not in report
 
 
+def test_sample_jaccard_uses_empty_set_convention() -> None:
+    references = [
+        {"id": "empty", "patient_id": "p1", "labels": []},
+        {"id": "miss", "patient_id": "p2", "labels": ["A"]},
+        {"id": "partial", "patient_id": "p3", "labels": ["A", "B"]},
+    ]
+    predictions = [
+        {"id": "empty", "labels": []},
+        {"id": "miss", "labels": []},
+        {"id": "partial", "labels": ["B"]},
+    ]
+
+    report = evaluate_rows(references, predictions, bootstrap_samples=0)
+
+    assert report["sample_jaccard"] == pytest.approx(0.5)
+
+
+def test_sample_jaccard_has_patient_bootstrap_interval() -> None:
+    references = [
+        {"id": "empty", "patient_id": "p1", "labels": []},
+        {"id": "miss", "patient_id": "p1", "labels": ["A"]},
+    ]
+    predictions = [
+        {"id": "empty", "labels": []},
+        {"id": "miss", "labels": []},
+    ]
+
+    report = evaluate_rows(references, predictions, bootstrap_samples=50, seed=5)
+
+    interval = report["confidence_intervals"]["sample_jaccard"]
+    assert interval["lower"] == pytest.approx(0.5)
+    assert interval["upper"] == pytest.approx(0.5)
+    assert interval["valid_resamples"] == 50
+
+
 def test_evaluate_rows_normalizes_label_whitespace() -> None:
     references = [{"id": "a", "patient_id": "p1", "labels": [" A "]}]
     predictions = [{"id": "a", "labels": ["A"]}]

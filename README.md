@@ -124,12 +124,13 @@ python -m medgemma_ecg.evaluate \
   --seed 42
 ```
 
-The evaluator reports exact set accuracy, Hamming loss, micro/macro/weighted precision,
-recall and F1, plus per-label specificity and negative predictive value. Per-label
-precision is the positive predictive value, and recall is sensitivity. Confidence
-intervals use a deterministic percentile
-bootstrap that resamples patients rather than individual ECGs, preserving correlation
-between records from the same patient. The default is 1,000 resamples at 95%
+The evaluator reports exact set accuracy, sample-average Jaccard similarity, Hamming loss,
+micro/macro/weighted precision, recall and F1, plus per-label specificity and negative
+predictive value. Empty reference and prediction label sets have Jaccard similarity 1;
+if only one set is empty, their similarity is 0. Per-label precision is the positive
+predictive value, and recall is sensitivity. Confidence intervals use a deterministic
+percentile bootstrap that resamples patients rather than individual ECGs, preserving
+correlation between records from the same patient. The default is 1,000 resamples at 95%
 confidence. Intervals record how many resamples had a defined metric, so rare-label
 results do not silently turn undefined sensitivity or precision into zero. Use
 `--bootstrap-samples 0` only when a quick point-estimate check is needed. Duplicate or

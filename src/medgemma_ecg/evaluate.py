@@ -14,6 +14,14 @@ from medgemma_ecg.manifest import MISSING_IDENTIFIER_VALUES, load_jsonl
 AVERAGES = ("micro", "macro", "weighted")
 
 
+def _sample_jaccard(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+    intersection = np.logical_and(y_true, y_pred).sum(axis=1)
+    union = np.logical_or(y_true, y_pred).sum(axis=1)
+    similarities = np.ones(union.shape, dtype=float)
+    np.divide(intersection, union, out=similarities, where=union != 0)
+    return float(similarities.mean())
+
+
 def _labels(row: dict, source: str, sample_id: str) -> list[str]:
     if "labels" not in row:
         raise ValueError(f"{source} id {sample_id!r} is missing labels")
@@ -53,6 +61,7 @@ def _score_arrays(
 
     report: dict[str, Any] = {
         "exact_set_accuracy": float(accuracy_score(y_true, y_pred)),
+        "sample_jaccard": _sample_jaccard(y_true, y_pred),
         "hamming_loss": float(hamming_loss(y_true, y_pred)),
     }
     for average in AVERAGES:
@@ -107,7 +116,11 @@ def _patient_bootstrap_indices(
 
 
 def _metric_paths(labels: Sequence[str]) -> list[tuple[str, ...]]:
-    paths: list[tuple[str, ...]] = [("exact_set_accuracy",), ("hamming_loss",)]
+    paths: list[tuple[str, ...]] = [
+        ("exact_set_accuracy",),
+        ("sample_jaccard",),
+        ("hamming_loss",),
+    ]
     paths.extend(
         (average, metric)
         for average in AVERAGES

@@ -100,7 +100,12 @@ def load_config(path: Path) -> dict:
 
 
 def select_rows(rows: list[dict], maximum: int | None) -> list[dict]:
-    return rows if maximum is None else rows[: int(maximum)]
+    if maximum is None:
+        return rows
+    limit = int(maximum)
+    if limit <= 0:
+        raise ValueError("sample limit must be positive")
+    return rows[:limit]
 
 
 def require_manifest_split(

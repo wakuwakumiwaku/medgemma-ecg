@@ -103,6 +103,20 @@ def select_rows(rows: list[dict], maximum: int | None) -> list[dict]:
     return rows if maximum is None else rows[: int(maximum)]
 
 
+def require_manifest_split(
+    rows: list[dict], expected_split: str, source_path: str | Path
+) -> None:
+    if not rows:
+        raise ValueError(f"{source_path} is empty")
+    for row in rows:
+        actual_split = row.get("split")
+        if actual_split != expected_split:
+            raise ValueError(
+                f"{source_path} must contain only {expected_split!r} rows; "
+                f"found {actual_split!r}"
+            )
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="QLoRA fine-tune MedGemma 1.5 on ECG images")
     parser.add_argument("--config", type=Path, required=True)
@@ -111,6 +125,17 @@ def main() -> None:
     config = load_config(args.config)
     if args.max_steps is not None:
         config["max_steps"] = args.max_steps
+
+    data_root = Path(config.get("data_root", "."))
+    train_manifest = Path(config["train_manifest"])
+    validation_manifest = Path(config["validation_manifest"])
+    train_rows = load_jsonl(train_manifest)
+    validation_rows = load_jsonl(validation_manifest)
+    require_manifest_split(train_rows, "train", train_manifest)
+    require_manifest_split(validation_rows, "validation", validation_manifest)
+    validate_rows(train_rows + validation_rows, data_root=data_root, require_images=True)
+    train_rows = select_rows(train_rows, config.get("max_train_samples"))
+    validation_rows = select_rows(validation_rows, config.get("max_validation_samples"))
 
     import torch
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
@@ -129,12 +154,6 @@ def main() -> None:
         raise SystemExit("The detected GPU does not support bfloat16")
 
     set_seed(int(config.get("seed", 42)))
-    data_root = Path(config.get("data_root", "."))
-    train_rows = load_jsonl(config["train_manifest"])
-    validation_rows = load_jsonl(config["validation_manifest"])
-    validate_rows(train_rows + validation_rows, data_root=data_root, require_images=True)
-    train_rows = select_rows(train_rows, config.get("max_train_samples"))
-    validation_rows = select_rows(validation_rows, config.get("max_validation_samples"))
 
     local_dir = Path(config.get("model_local_dir", ""))
     model_source = str(local_dir) if (local_dir / "config.json").is_file() else config["model"]

@@ -59,6 +59,10 @@ def _score_arrays(
         precision_recall_fscore_support,
     )
 
+    # sklearn treats a single indicator column as binary rather than multilabel.
+    # Restrict those metrics to label presence (1), not the absent class (0).
+    metric_labels = [1] if len(labels) == 1 else None
+
     report: dict[str, Any] = {
         "exact_set_accuracy": float(accuracy_score(y_true, y_pred)),
         "sample_jaccard": _sample_jaccard(y_true, y_pred),
@@ -66,7 +70,7 @@ def _score_arrays(
     }
     for average in AVERAGES:
         precision, recall, f1, _ = precision_recall_fscore_support(
-            y_true, y_pred, average=average, zero_division=zero_division
+            y_true, y_pred, labels=metric_labels, average=average, zero_division=zero_division
         )
         report[average] = {
             "precision": float(precision),
@@ -75,9 +79,9 @@ def _score_arrays(
         }
 
     precision, recall, f1, support = precision_recall_fscore_support(
-        y_true, y_pred, average=None, zero_division=zero_division
+        y_true, y_pred, labels=metric_labels, average=None, zero_division=zero_division
     )
-    confusion = multilabel_confusion_matrix(y_true, y_pred)
+    confusion = multilabel_confusion_matrix(y_true, y_pred, labels=metric_labels)
     per_label = {}
 
     def ratio(numerator: int, denominator: int) -> float:

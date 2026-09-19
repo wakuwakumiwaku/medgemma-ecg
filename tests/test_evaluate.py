@@ -52,6 +52,80 @@ def test_evaluate_rows_reports_multilabel_metrics() -> None:
     assert "confidence_intervals" not in report
 
 
+@pytest.mark.parametrize(
+    ("truth", "predicted", "counts"),
+    [
+        ([1, 1, 1, 0], [1, 1, 0, 0], (2, 1, 0, 1)),
+        ([1, 1], [1, 1], (2, 0, 0, 0)),
+        ([1, 1], [0, 0], (0, 0, 0, 2)),
+        ([0, 0], [1, 1], (0, 0, 2, 0)),
+    ],
+)
+def test_single_label_metrics_score_presence(
+    truth: list[int], predicted: list[int], counts: tuple[int, int, int, int]
+) -> None:
+    references = [
+        {"id": str(index), "patient_id": "p1", "labels": ["A"] if value else []}
+        for index, value in enumerate(truth)
+    ]
+    predictions = [
+        {"id": str(index), "labels": ["A"] if value else []}
+        for index, value in enumerate(predicted)
+    ]
+
+    report = evaluate_rows(references, predictions, bootstrap_samples=0)
+
+    tp, tn, fp, fn = counts
+    precision = tp / (tp + fp) if tp + fp else 0
+    recall = tp / (tp + fn) if tp + fn else 0
+    f1 = 2 * tp / (2 * tp + fp + fn)
+    expected_scores = {
+        "precision": pytest.approx(precision),
+        "recall": pytest.approx(recall),
+        "f1": pytest.approx(f1),
+    }
+    assert report["labels"] == ["A"]
+    assert report["per_label"]["A"] == {
+        **expected_scores,
+        "support": tp + fn,
+        "true_positive": tp,
+        "true_negative": tn,
+        "false_positive": fp,
+        "false_negative": fn,
+        "specificity": pytest.approx(tn / (tn + fp) if tn + fp else 0),
+        "npv": pytest.approx(tn / (tn + fn) if tn + fn else 0),
+    }
+    for average in ("micro", "macro", "weighted"):
+        assert report[average] == expected_scores
+    accuracy = (tp + tn) / len(truth)
+    assert report["exact_set_accuracy"] == pytest.approx(accuracy)
+    assert report["sample_jaccard"] == pytest.approx(accuracy)
+    assert report["hamming_loss"] == pytest.approx(1 - accuracy)
+
+
+def test_single_label_bootstrap_excludes_undefined_presence_metrics() -> None:
+    references = [
+        {"id": "positive", "patient_id": "p1", "labels": ["A"]},
+        {"id": "negative", "patient_id": "p2", "labels": []},
+    ]
+    predictions = [
+        {"id": "positive", "labels": ["A"]},
+        {"id": "negative", "labels": []},
+    ]
+
+    report = evaluate_rows(references, predictions, bootstrap_samples=20, seed=42)
+
+    intervals = report["confidence_intervals"]
+    for metric in ("precision", "recall", "f1", "specificity", "npv"):
+        interval = intervals["per_label"]["A"][metric]
+        assert interval["lower"] == pytest.approx(1.0)
+        assert interval["upper"] == pytest.approx(1.0)
+        assert 0 < interval["valid_resamples"] < 20
+    for average in ("micro", "macro", "weighted"):
+        for metric in ("precision", "recall", "f1"):
+            assert intervals[average][metric] == intervals["per_label"]["A"][metric]
+
+
 def test_sample_jaccard_uses_empty_set_convention() -> None:
     references = [
         {"id": "empty", "patient_id": "p1", "labels": []},

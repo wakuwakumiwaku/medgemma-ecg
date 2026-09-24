@@ -25,15 +25,35 @@ def extract_json(text: str) -> dict | None:
     except json.JSONDecodeError:
         decoder = json.JSONDecoder()
         candidates: list[tuple[int, dict]] = []
+        depth = 0
+        in_string = False
+        escaped = False
         for index, character in enumerate(text):
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif character == "\\":
+                    escaped = True
+                elif character == '"':
+                    in_string = False
+                continue
+            if character == '"':
+                in_string = True
+                continue
+            if character == "}" and depth:
+                depth -= 1
             if character != "{":
                 continue
+            depth += 1
+            # A complete inner object does not make a truncated response valid.
+            if depth != 1:
+                continue
             try:
-                candidate, consumed = decoder.raw_decode(text[index:])
+                candidate, end = decoder.raw_decode(text, index)
             except json.JSONDecodeError:
                 continue
             if isinstance(candidate, dict):
-                candidates.append((consumed, candidate))
+                candidates.append((end - index, candidate))
         return max(candidates, default=(0, None), key=lambda item: item[0])[1]
     return value if isinstance(value, dict) else None
 

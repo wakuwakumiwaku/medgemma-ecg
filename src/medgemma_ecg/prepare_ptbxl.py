@@ -173,7 +173,10 @@ def main() -> None:
     for number, (ecg_id, row) in enumerate(records.iterrows(), start=1):
         split = split_from_fold(int(row["strat_fold"]))
         sample_id = f"ptbxl-{int(ecg_id):05d}"
-        output_image = args.output_root / "images" / split / f"{sample_id}.png"
+        # The same ECG has separate low- and high-resolution source waveforms.
+        output_image = (
+            args.output_root / "images" / f"{args.sampling_rate}hz" / split / f"{sample_id}.png"
+        )
         record_rel = str(row[filename_column])
         record_path = args.ptbxl_root / record_rel
         if args.overwrite or not output_image.is_file():

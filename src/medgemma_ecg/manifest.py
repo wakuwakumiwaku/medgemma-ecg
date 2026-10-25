@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import stat
+import tempfile
 from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
@@ -138,12 +141,25 @@ def validate_rows(
 
 
 def write_jsonl(path: str | Path, rows: Iterable[dict]) -> None:
-    path = Path(path)
+    path = Path(path).resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            clean = {key: value for key, value in row.items() if not key.startswith("_")}
-            handle.write(json.dumps(clean, ensure_ascii=False) + "\n")
+    try:
+        previous_mode = stat.S_IMODE(path.stat().st_mode)
+    except FileNotFoundError:
+        previous_mode = None
+    else:
+        if not os.access(path, os.W_OK):
+            raise PermissionError(f"Cannot write read-only output: {path}")
+
+    with tempfile.TemporaryDirectory(prefix=".medgemma-jsonl-", dir=path.parent) as staging:
+        staged = Path(staging) / "manifest.jsonl"
+        with staged.open("w", encoding="utf-8") as handle:
+            for row in rows:
+                clean = {key: value for key, value in row.items() if not key.startswith("_")}
+                handle.write(json.dumps(clean, ensure_ascii=False) + "\n")
+        if previous_mode is not None:
+            staged.chmod(previous_mode)
+        os.replace(staged, path)
 
 
 def main() -> None:

@@ -291,6 +291,20 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.output:
+        # Resolve even missing parents: mkdir could make missing/../input writable.
+        output = args.output.resolve()
+        for option, manifest in (
+            ("--references", args.references), ("--predictions", args.predictions)
+        ):
+            try:
+                aliases_input = output.samefile(manifest)
+            except FileNotFoundError:
+                aliases_input = False
+            if aliases_input:
+                parser.error(
+                    f"--output {args.output} must not refer to the same file as {option} {manifest}"
+                )
     try:
         report = evaluate_rows(
             load_jsonl(args.references),

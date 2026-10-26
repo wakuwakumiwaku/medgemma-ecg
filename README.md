@@ -142,6 +142,9 @@ results do not silently turn undefined sensitivity or precision into zero. Use
 `--bootstrap-samples 0` only when a quick point-estimate check is needed. Duplicate or
 mismatched sample IDs are rejected instead of being silently overwritten.
 Every evaluation row must include a `labels` list; use `[]` to record no labels.
+The optional `--output` report must be a different file from both input manifests;
+paths resolving to an input, including symlinks and hardlinks, are rejected before
+writing. Omit `--output` to print the report only. Existing separate reports may be replaced.
 
 Do not tune on the test set. For a credible study, also report external-dataset
 performance, subgroup performance, and reader comparison.

@@ -52,6 +52,8 @@ def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Pat
     missing = set(CANONICAL_LEADS) - set(lead_index)
     if missing:
         raise ValueError(f"missing required leads: {sorted(missing)}")
+    if not np.isfinite(signal).all():
+        raise ValueError("signal contains non-finite samples (NaN or infinity)")
 
     duration = min(10.0, signal.shape[0] / fs)
     figure, axes = plt.subplots(4, 1, figsize=(14, 9), dpi=120, sharex=True)

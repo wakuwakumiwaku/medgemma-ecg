@@ -84,6 +84,15 @@ images. Rerunning a rate reuses its images unless `--overwrite` is given. Older
 images without a sampling-rate directory are left untouched and are not reused;
 preparing them again renders new images and updates the manifests.
 
+Rendering rejects waveforms containing NaN or infinite samples, including WFDB
+missing-sample markers, rather than publishing images with silently missing traces.
+The failing record does not replace its existing image, and manifests are not
+rewritten when rendering fails. Repair or explicitly exclude the source record
+before retrying; missing values are not imputed. Finite flatlines remain accepted.
+Cached images are not revalidated against the source waveform: use `--overwrite`
+to check and rerender them. Images from earlier records in a failed run may already
+have been rendered; dataset publication is not an all-files transaction.
+
 ## 5. Fine-tune
 
 Edit `configs/rtx5080_16gb.yaml` if your paths differ. Run one optimization step first:

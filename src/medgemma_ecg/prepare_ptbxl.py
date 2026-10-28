@@ -3,6 +3,9 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import os
+import stat
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -84,11 +87,33 @@ def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Pat
         for spine in axis.spines.values():
             spine.set_visible(False)
 
-    figure.suptitle("12-lead ECG | 25 mm/s | 10 mm/mV", fontsize=10)
-    figure.tight_layout(rect=(0, 0, 1, 0.98), h_pad=0.1)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    figure.savefig(output, bbox_inches="tight", pad_inches=0.04)
-    plt.close(figure)
+    try:
+        figure.suptitle("12-lead ECG | 25 mm/s | 10 mm/mV", fontsize=10)
+        figure.tight_layout(rect=(0, 0, 1, 0.98), h_pad=0.1)
+        if not output.suffix:
+            output = output.with_name(
+                f"{output.name.rstrip('.')}.{plt.rcParams['savefig.format']}"
+            )
+        image_name = output.name
+        output = output.resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            previous_mode = stat.S_IMODE(output.stat().st_mode)
+        except FileNotFoundError:
+            previous_mode = None
+        else:
+            if not os.access(output, os.W_OK):
+                raise PermissionError(f"Cannot write read-only output: {output}")
+
+        # main() reuses existing images: never publish a partial render as a cache hit.
+        with tempfile.TemporaryDirectory(prefix=".medgemma-image-", dir=output.parent) as staging:
+            staged = Path(staging) / image_name
+            figure.savefig(staged, bbox_inches="tight", pad_inches=0.04)
+            if previous_mode is not None:
+                staged.chmod(previous_mode)
+            os.replace(staged, output)
+    finally:
+        plt.close(figure)
 
 
 def split_from_fold(fold: int) -> str:

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
 import wfdb
+from matplotlib.figure import Figure
 from PIL import Image
 
 from medgemma_ecg.manifest import load_jsonl, resolve_image_path
@@ -149,3 +152,202 @@ def test_unversioned_cache_is_not_reused(
     assert legacy_image.read_bytes() == legacy_bytes
     with Image.open(resolve_image_path(row)) as image:
         image.verify()
+
+
+@pytest.fixture
+def rendered_figures():
+    """Keep a failing renderer test from leaking figures into other tests."""
+    before = set(plt.get_fignums())
+    yield before
+    for number in set(plt.get_fignums()) - before:
+        plt.close(number)
+
+
+@pytest.mark.parametrize("existing", [False, True])
+@pytest.mark.parametrize("failure", ["save", "replace"])
+def test_render_failure_does_not_publish_incomplete_image(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    rendered_figures: set[int],
+    existing: bool,
+    failure: str,
+) -> None:
+    output = tmp_path / "synthetic.png"
+    previous = b"previous synthetic cache contents"
+    if existing:
+        output.write_bytes(previous)
+    before = set(tmp_path.iterdir())
+    reached = []
+
+    def failed_save(self, destination, **kwargs):
+        Path(destination).write_bytes(b"synthetic partial PNG")
+        reached.append("save")
+        raise OSError("synthetic save failure")
+
+    def failed_replace(source, destination):
+        with Image.open(source) as image:
+            image.verify()
+        reached.append("replace")
+        raise OSError("synthetic replace failure")
+
+    if failure == "save":
+        monkeypatch.setattr(Figure, "savefig", failed_save)
+    else:
+        monkeypatch.setattr(os, "replace", failed_replace)
+
+    with pytest.raises(OSError, match=f"synthetic {failure} failure"):
+        render_ecg(np.zeros((1000, 12)), 100, CANONICAL_LEADS, output)
+
+    assert reached == [failure]
+    assert (output.read_bytes() if output.exists() else None) == (
+        previous if existing else None
+    )
+    assert set(tmp_path.iterdir()) == before
+    assert set(plt.get_fignums()) == rendered_figures
+
+
+def test_prepare_retries_render_after_partial_save_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    ptbxl_root: Path,
+    rendered_figures: set[int],
+) -> None:
+    output = tmp_path / "processed"
+    reads = []
+    original_read = wfdb.rdrecord
+
+    def observed_read(*args, **kwargs):
+        reads.append(args[0])
+        return original_read(*args, **kwargs)
+
+    def failed_save(self, destination, **kwargs):
+        Path(destination).write_bytes(b"synthetic partial PNG")
+        raise OSError("synthetic save failure")
+
+    monkeypatch.setattr(wfdb, "rdrecord", observed_read)
+    with monkeypatch.context() as patch:
+        patch.setattr(Figure, "savefig", failed_save)
+        with pytest.raises(OSError, match="synthetic save failure"):
+            prepare(monkeypatch, ptbxl_root, output, 100)
+    assert len(reads) == 1
+    assert not list(output.glob("*.jsonl"))
+
+    row = prepare(monkeypatch, ptbxl_root, output, 100)
+
+    assert len(reads) == 2, "Retry must render the waveform, not reuse an incomplete PNG"
+    with Image.open(resolve_image_path(row)) as image:
+        image.verify()
+    assert set(plt.get_fignums()) == rendered_figures
+    assert not list(output.rglob(".medgemma-image-*"))
+
+
+def test_failed_overwrite_preserves_cached_image_and_manifests(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    ptbxl_root: Path,
+    rendered_figures: set[int],
+) -> None:
+    output = tmp_path / "processed"
+    row = prepare(monkeypatch, ptbxl_root, output, 100)
+    image_path = resolve_image_path(row)
+    previous_image = image_path.read_bytes()
+    previous_manifests = {path: path.read_bytes() for path in output.glob("*.jsonl")}
+    reached = []
+
+    def failed_save(self, destination, **kwargs):
+        Path(destination).write_bytes(b"synthetic partial replacement PNG")
+        reached.append(True)
+        raise OSError("synthetic overwrite failure")
+
+    monkeypatch.setattr(Figure, "savefig", failed_save)
+    with pytest.raises(OSError, match="synthetic overwrite failure"):
+        prepare(monkeypatch, ptbxl_root, output, 100, "--overwrite")
+
+    assert reached == [True]
+    assert image_path.read_bytes() == previous_image
+    assert {path: path.read_bytes() for path in output.glob("*.jsonl")} == previous_manifests
+    assert set(plt.get_fignums()) == rendered_figures
+    assert not list(output.rglob(".medgemma-image-*"))
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_successful_render_matches_direct_save_pixels(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    rendered_figures: set[int],
+    existing: bool,
+) -> None:
+    output_dir = tmp_path / "cache"
+    output_dir.mkdir()
+    output = output_dir / "synthetic.png"
+    if existing:
+        output.write_bytes(b"old synthetic contents")
+    expected = tmp_path / "direct.png"
+    original_save = Figure.savefig
+    saves = []
+
+    def observed_save(self, destination, **kwargs):
+        saves.append(Path(destination))
+        original_save(self, expected, **kwargs)
+        return original_save(self, destination, **kwargs)
+
+    monkeypatch.setattr(Figure, "savefig", observed_save)
+    time = np.arange(1000) / 100
+    signal = np.tile(np.sin(2 * np.pi * time)[:, None], (1, 12))
+    render_ecg(signal, 100, CANONICAL_LEADS, output)
+
+    assert len(saves) == 1
+    with Image.open(output) as actual, Image.open(expected) as direct:
+        np.testing.assert_array_equal(np.asarray(actual), np.asarray(direct))
+    assert set(output_dir.iterdir()) == {output}
+    assert set(plt.get_fignums()) == rendered_figures
+
+
+def test_successful_render_preserves_symlink_and_permissions(tmp_path: Path) -> None:
+    # Format follows the caller's .png name, not the resolved target's suffix.
+    target = tmp_path / "target.cache"
+    target.write_bytes(b"previous synthetic contents")
+    target.chmod(0o640)
+    previous_mode = target.stat().st_mode
+    output = tmp_path / "linked.png"
+    output.symlink_to(target.name)
+
+    render_ecg(np.zeros((1000, 12)), 100, CANONICAL_LEADS, output)
+
+    assert output.is_symlink()
+    assert target.stat().st_mode == previous_mode
+    with Image.open(target) as image:
+        image.verify()
+    assert set(tmp_path.iterdir()) == {target, output}
+
+
+@pytest.mark.parametrize("name", ["synthetic", "synthetic."])
+def test_render_preserves_default_format_extension(tmp_path: Path, name: str) -> None:
+    output = tmp_path / name
+    expected = tmp_path / "synthetic.png"
+
+    with plt.rc_context({"savefig.format": "png"}):
+        render_ecg(np.zeros((1000, 12)), 100, CANONICAL_LEADS, output)
+
+    with Image.open(expected) as image:
+        image.verify()
+    assert set(tmp_path.iterdir()) == {expected}
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX write-permission control")
+def test_render_refuses_read_only_destination(
+    tmp_path: Path, rendered_figures: set[int]
+) -> None:
+    output = tmp_path / "synthetic.png"
+    previous = b"previous synthetic contents"
+    output.write_bytes(previous)
+    output.chmod(0o444)
+    if os.access(output, os.W_OK):
+        pytest.skip("The effective user can write a mode-444 file")
+
+    with pytest.raises(PermissionError):
+        render_ecg(np.zeros((1000, 12)), 100, CANONICAL_LEADS, output)
+
+    assert output.read_bytes() == previous
+    assert set(tmp_path.iterdir()) == {output}
+    assert set(plt.get_fignums()) == rendered_figures

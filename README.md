@@ -154,6 +154,13 @@ Every evaluation row must include a `labels` list; use `[]` to record no labels.
 The optional `--output` report must be a different file from both input manifests;
 paths resolving to an input, including symlinks and hardlinks, are rejected before
 writing. Omit `--output` to print the report only. Existing separate reports may be replaced.
+Reports are staged beside the resolved destination and replaced only after the complete
+UTF-8 JSON has been written and closed. A write, close or replacement failure preserves
+the previous report (or leaves a first-write destination absent), and staging is cleaned
+up. The destination directory must be writable. Existing file permissions and destination
+symlinks are preserved; replacement updates only the destination path, so other hardlinks
+to an old report retain its previous contents. This is per-file atomic publication, not
+power-loss durability or a transaction with stdout, which is printed before the file write.
 
 Do not tune on the test set. For a credible study, also report external-dataset
 performance, subgroup performance, and reader comparison.

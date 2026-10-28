@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import stat
+import tempfile
 from collections import defaultdict
 from collections.abc import Sequence
 from pathlib import Path
@@ -288,6 +291,26 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _write_report(path: Path, rendered: str) -> None:
+    # Follow destination symlinks, but publish only a completely closed report.
+    path = path.resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        previous_mode = stat.S_IMODE(path.stat().st_mode)
+    except FileNotFoundError:
+        previous_mode = None
+    else:
+        if not os.access(path, os.W_OK):
+            raise PermissionError(f"Cannot write read-only output: {path}")
+
+    with tempfile.TemporaryDirectory(prefix=".medgemma-report-", dir=path.parent) as staging:
+        staged = Path(staging) / "metrics.json"
+        staged.write_text(rendered, encoding="utf-8")
+        if previous_mode is not None:
+            staged.chmod(previous_mode)
+        os.replace(staged, path)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -319,8 +342,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     rendered = json.dumps(report, indent=2, sort_keys=True)
     print(rendered)
     if args.output:
-        args.output.parent.mkdir(parents=True, exist_ok=True)
-        args.output.write_text(rendered + "\n", encoding="utf-8")
+        _write_report(args.output, rendered + "\n")
     return 0
 
 

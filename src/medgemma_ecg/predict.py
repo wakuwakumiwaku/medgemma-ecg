@@ -23,6 +23,16 @@ def main() -> None:
     parser.add_argument("--no-quantization", action="store_true")
     args = parser.parse_args()
 
+    # Prediction JSONL lacks the source manifest's images, targets and patient IDs.
+    # Refuse aliases before loading a model or creating any output directories.
+    output = args.output.resolve()
+    try:
+        aliases_manifest = output.samefile(args.manifest)
+    except FileNotFoundError:
+        aliases_manifest = False
+    if aliases_manifest:
+        parser.error("--output must not refer to the same file as --manifest")
+
     import torch
     from transformers import (
         AutoModelForImageTextToText,

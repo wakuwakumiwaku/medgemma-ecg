@@ -46,9 +46,14 @@ def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Pat
 
     if signal.ndim != 2 or signal.shape[1] != len(lead_names):
         raise ValueError("signal shape and lead names do not match")
-    lead_index = {
-        normalize_lead_name(name): index for index, name in enumerate(lead_names)
-    }
+    if signal.shape[0] == 0:
+        raise ValueError("signal must contain samples")
+    if not np.isfinite(fs) or fs <= 0:
+        raise ValueError("sampling rate must be finite and positive")
+    normalized_leads = [normalize_lead_name(name) for name in lead_names]
+    if len(set(normalized_leads)) != len(normalized_leads):
+        raise ValueError("duplicate lead names after normalization")
+    lead_index = {name: index for index, name in enumerate(normalized_leads)}
     missing = set(CANONICAL_LEADS) - set(lead_index)
     if missing:
         raise ValueError(f"missing required leads: {sorted(missing)}")

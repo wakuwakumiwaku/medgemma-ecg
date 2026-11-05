@@ -225,3 +225,10 @@ plotting, styling, layout or image saving fails. Other figures are left open,
 the original error propagates, and an existing cached image remains untouched
 when a plotting failure occurs before publication. A corrected render can retry
 without accumulating failed figures.
+
+### ECG rendering metadata
+
+`render_ecg()` requires at least one sample, a finite positive sampling rate,
+and unique lead names after normalization (for example, `aVR` and ` AVR `
+are duplicates). Invalid metadata is rejected before creating a figure or
+changing a cached image. Short, nonempty recordings remain supported.

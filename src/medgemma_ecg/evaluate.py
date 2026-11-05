@@ -44,7 +44,17 @@ def _index_rows(rows: Sequence[dict], source: str) -> dict[str, dict]:
             raise ValueError(f"{source} row has an empty id")
         if sample_id in indexed:
             raise ValueError(f"duplicate {source} id {sample_id!r}")
-        indexed[sample_id] = {**row, "labels": _labels(row, source, sample_id)}
+        labels = _labels(row, source, sample_id)
+        if source == "prediction" and "parsed" in row:
+            # predict.main retains failed responses with fallback labels=[].
+            # Those are abstentions/schema failures, not explicit negative labels.
+            parsed = row["parsed"]
+            if not isinstance(parsed, dict):
+                raise ValueError(f"prediction id {sample_id!r} has an unparsed response")
+            parsed_labels = _labels(parsed, "parsed prediction", sample_id)
+            if labels != parsed_labels:
+                raise ValueError(f"prediction id {sample_id!r} labels and parsed.labels differ")
+        indexed[sample_id] = {**row, "labels": labels}
     return indexed
 
 

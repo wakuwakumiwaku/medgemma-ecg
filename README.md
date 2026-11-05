@@ -155,6 +155,13 @@ results do not silently turn undefined sensitivity or precision into zero. Use
 `--bootstrap-samples 0` only when a quick point-estimate check is needed. Duplicate or
 mismatched sample IDs are rejected instead of being silently overwritten.
 Every evaluation row must include a `labels` list; use `[]` to record no labels.
+For prediction files produced by this project's predictor, `parsed` must also be
+a JSON object with a valid `labels` list matching the exported labels after
+normalization. Unparseable responses and missing or malformed parsed labels are
+rejected, not scored as empty predictions: a parser failure is not evidence that
+no findings are present. Repair or rerun those responses, or define and report an
+explicit abstention policy separately; do not silently drop failed rows. External
+label-only prediction files remain supported, including explicit empty sets.
 The optional `--output` report must be a different file from both input manifests;
 paths resolving to an input, including symlinks and hardlinks, are rejected before
 writing. Omit `--output` to print the report only. Existing separate reports may be replaced.

@@ -56,40 +56,43 @@ def render_ecg(signal: np.ndarray, fs: float, lead_names: list[str], output: Pat
         raise ValueError("signal contains non-finite samples (NaN or infinity)")
 
     duration = min(10.0, signal.shape[0] / fs)
-    figure, axes = plt.subplots(4, 1, figsize=(14, 9), dpi=120, sharex=True)
-    figure.patch.set_facecolor("white")
-
-    for row, axis in enumerate(axes[:3]):
-        for column in range(4):
-            lead, start = DISPLAY_ORDER[row * 4 + column]
-            start_sample = int(start * fs)
-            end_sample = min(start_sample + int(2.5 * fs), signal.shape[0])
-            segment = signal[start_sample:end_sample, lead_index[lead]]
-            time = np.arange(segment.size) / fs + start
-            axis.plot(time, segment, color="#111111", linewidth=0.8)
-            axis.text(start + 0.03, 1.25, lead, fontsize=9, weight="bold")
-            if column:
-                axis.axvline(start, color="#cc7777", linewidth=0.4)
-
-    rhythm = signal[: min(int(10 * fs), signal.shape[0]), lead_index["II"]]
-    rhythm_time = np.arange(rhythm.size) / fs
-    axes[3].plot(rhythm_time, rhythm, color="#111111", linewidth=0.8)
-    axes[3].text(0.03, 1.25, "II rhythm", fontsize=9, weight="bold")
-
-    for axis in axes:
-        axis.set_xlim(0, max(10.0, duration))
-        axis.set_ylim(-1.8, 1.8)
-        axis.set_xticks(np.arange(0, 10.01, 0.2), minor=False)
-        axis.set_xticks(np.arange(0, 10.01, 0.04), minor=True)
-        axis.set_yticks(np.arange(-2.0, 2.01, 0.5), minor=False)
-        axis.set_yticks(np.arange(-2.0, 2.01, 0.1), minor=True)
-        axis.grid(which="major", color="#e7a4a4", linewidth=0.45)
-        axis.grid(which="minor", color="#f5d5d5", linewidth=0.25)
-        axis.tick_params(which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
-        for spine in axis.spines.values():
-            spine.set_visible(False)
-
+    figure = plt.figure(figsize=(14, 9), dpi=120)
     try:
+        axes = figure.subplots(4, 1, sharex=True)
+        figure.patch.set_facecolor("white")
+
+        for row, axis in enumerate(axes[:3]):
+            for column in range(4):
+                lead, start = DISPLAY_ORDER[row * 4 + column]
+                start_sample = int(start * fs)
+                end_sample = min(start_sample + int(2.5 * fs), signal.shape[0])
+                segment = signal[start_sample:end_sample, lead_index[lead]]
+                time = np.arange(segment.size) / fs + start
+                axis.plot(time, segment, color="#111111", linewidth=0.8)
+                axis.text(start + 0.03, 1.25, lead, fontsize=9, weight="bold")
+                if column:
+                    axis.axvline(start, color="#cc7777", linewidth=0.4)
+
+        rhythm = signal[: min(int(10 * fs), signal.shape[0]), lead_index["II"]]
+        rhythm_time = np.arange(rhythm.size) / fs
+        axes[3].plot(rhythm_time, rhythm, color="#111111", linewidth=0.8)
+        axes[3].text(0.03, 1.25, "II rhythm", fontsize=9, weight="bold")
+
+        for axis in axes:
+            axis.set_xlim(0, max(10.0, duration))
+            axis.set_ylim(-1.8, 1.8)
+            axis.set_xticks(np.arange(0, 10.01, 0.2), minor=False)
+            axis.set_xticks(np.arange(0, 10.01, 0.04), minor=True)
+            axis.set_yticks(np.arange(-2.0, 2.01, 0.5), minor=False)
+            axis.set_yticks(np.arange(-2.0, 2.01, 0.1), minor=True)
+            axis.grid(which="major", color="#e7a4a4", linewidth=0.45)
+            axis.grid(which="minor", color="#f5d5d5", linewidth=0.25)
+            axis.tick_params(
+                which="both", bottom=False, left=False, labelbottom=False, labelleft=False
+            )
+            for spine in axis.spines.values():
+                spine.set_visible(False)
+
         figure.suptitle("12-lead ECG | 25 mm/s | 10 mm/mV", fontsize=10)
         figure.tight_layout(rect=(0, 0, 1, 0.98), h_pad=0.1)
         if not output.suffix:

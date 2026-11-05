@@ -217,3 +217,11 @@ Useful sources:
 Code in this repository is licensed under Apache-2.0. MedGemma weights are governed separately by Google's Health AI Developer Foundations terms. Every ECG dataset retains its own license and citation requirements.
 
 LoRA adapters and merged checkpoints may qualify as Model Derivatives under those terms. Before distributing either, review the current agreement at https://developers.google.com/health-ai-developer-foundations/terms and include all required use restrictions, modification notices, agreement copy, and prescribed notice text. This repository does not distribute a model derivative.
+
+### Renderer resource cleanup
+
+`render_ecg()` closes its own Matplotlib figure even if subplot initialization,
+plotting, styling, layout or image saving fails. Other figures are left open,
+the original error propagates, and an existing cached image remains untouched
+when a plotting failure occurs before publication. A corrected render can retry
+without accumulating failed figures.

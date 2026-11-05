@@ -78,11 +78,15 @@ python -m medgemma_ecg.manifest \
 
 The recommended PTB-XL folds are preserved: folds 1 through 8 for training, fold 9 for validation, and fold 10 for testing. The validator rejects patient leakage across splits.
 
-Rendered images are cached under `images/<sampling-rate>hz/<split>/`, so switching
-between 100 Hz and 500 Hz in the same output root does not reuse the other rate's
-images. Rerunning a rate reuses its images unless `--overwrite` is given. Older
-images without a sampling-rate directory are left untouched and are not reused;
-preparing them again renders new images and updates the manifests.
+Rendered images are cached under `images/<sampling-rate>hz/<split>/`. Image
+filenames include a SHA-256 digest of the resolved source waveform path, so using
+another dataset root or changing a record's source path cannot silently reuse
+pixels from an unrelated ECG with the same ID. Switching between 100 Hz and
+500 Hz also keeps separate images. Resolved aliases of the same source reuse its
+cache unless `--overwrite` is given. Older images without source-bound filenames
+are left untouched and are not reused; preparing them again renders new images
+and updates the manifests. This key identifies a source location, not its file
+contents: use `--overwrite` after changing waveform files in place.
 
 Rendering rejects waveforms containing NaN or infinite samples, including WFDB
 missing-sample markers, rather than publishing images with silently missing traces.

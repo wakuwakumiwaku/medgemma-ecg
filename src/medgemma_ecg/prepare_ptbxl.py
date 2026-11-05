@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import hashlib
 import json
 import os
 import stat
@@ -208,12 +209,16 @@ def main() -> None:
     for number, (ecg_id, row) in enumerate(records.iterrows(), start=1):
         split = split_from_fold(int(row["strat_fold"]))
         sample_id = f"ptbxl-{int(ecg_id):05d}"
-        # The same ECG has separate low- and high-resolution source waveforms.
-        output_image = (
-            args.output_root / "images" / f"{args.sampling_rate}hz" / split / f"{sample_id}.png"
-        )
         record_rel = str(row[filename_column])
         record_path = args.ptbxl_root / record_rel
+        # ECG IDs are only unique within a dataset. Bind cached pixels to the
+        # resolved source location without exposing local paths in image names.
+        source_key = hashlib.sha256(str(record_path.resolve()).encode("utf-8")).hexdigest()
+        # The same ECG has separate low- and high-resolution source waveforms.
+        output_image = (
+            args.output_root / "images" / f"{args.sampling_rate}hz"
+            / split / f"{sample_id}-{source_key}.png"
+        )
         if args.overwrite or not output_image.is_file():
             record = wfdb.rdrecord(str(record_path))
             render_ecg(record.p_signal, float(record.fs), list(record.sig_name), output_image)
